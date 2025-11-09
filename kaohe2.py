@@ -2,45 +2,34 @@ import jax
 import jax.numpy as jnp
 import optax
 from flax import nnx
-import torch
-import torchvision
-from torchvision import transforms
-from torch.utils.data import DataLoader
-import numpy as np
+from torch.utils.data import Dataset, DataLoader
+import os
+from os import path
+import pandas as pd
+class Cifar10Dataset(Dataset):
 
-transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomCrop(32, padding=4),
-    transforms.ToTensor(),
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
+    def __init__(self,cifar10_train,cifar10_text):
+        self.cifar10_train = cifar10_train
+        self.cifar10_text = cifar10_text
 
-train_datasets = torchvision.datasets.CIFAR10(
-    root='/home/rose/cifar10', 
-    train=True, 
-    download=True, 
-    transform=transform
-)
-test_datasets = torchvision.datasets.CIFAR10(
-    root='/home/rose/cifar10', 
-    train=False, 
-    download=True, 
-    transform=transform
-)
+        self.train_df = pd.read_csv(cifar10_train,sep='\t')
+        self.test_df = pd.read_csv(cifar10_text,sep='\t')
 
-batch_size = 64
-train_loader = DataLoader(
-    train_datasets, 
-    batch_size=batch_size, 
-    shuffle=True, 
-    num_workers=2
-)
-test_loader = DataLoader(
-    test_datasets, 
-    batch_size=batch_size, 
-    shuffle=False, 
-    num_workers=2
-)
+    def __getitem__(self,idx):
+        row = self.train_df.iloc[idx]
+        cifar10 = torch.tensor(row[1:-1].values,dtype=torch.float)
+        label = row[-1]
+        return cifar10, label
+    
+    def __getitem__(self,idx):
+        row = self.test_df.iloc[idx]
+        cifar10 = torch.tensor(row[1:-1].values,dtype=torch.float)
+        label = row[-1]
+        return cifar10, label
+    
+    def __len__(self):
+        return len(self.train_df)
+
 
 class SimpleCNN(nnx.Module):
     def __init__(self, rngs: nnx.Rngs):
@@ -104,7 +93,7 @@ def main():
         epoch_accuracy = 0.0
         num_batches = 0
         
-        for batch_idx, (images, labels) in enumerate(train_loader):
+        for batch_idx, (images, labels) in enumerate():
             images_np = images.numpy().transpose(0, 2, 3, 1)
             labels_np = labels.numpy()
             
@@ -131,7 +120,7 @@ def main():
         test_accuracy = 0.0
         test_batches = 0
         
-        for images, labels in test_loader:
+        for images, labels in ():
             images_np = images.numpy().transpose(0, 2, 3, 1)
             labels_np = labels.numpy()
             
